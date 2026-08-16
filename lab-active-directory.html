@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Building an Active Directory Home Lab | TechDesk.log</title>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0D1B2A; --surface: #1E2D3D; --surface2: #162536;
+      --border: #2A3F54; --cyan: #00D4FF; --green: #39D353;
+      --text: #E8EDF2; --muted: #8A9BB0;
+      --font-mono: 'JetBrains Mono', monospace;
+      --font-body: 'Inter', sans-serif;
+    }
+    body { background: var(--bg); color: var(--text); font-family: var(--font-body); line-height: 1.7; }
+    nav { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 2rem; height: 56px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 99; }
+    .logo { font-family: var(--font-mono); font-size: 1rem; font-weight: 700; color: var(--cyan); text-decoration: none; }
+    .logo span { color: var(--text); }
+    .back-link { font-family: var(--font-mono); font-size: 0.78rem; color: var(--muted); text-decoration: none; }
+    .back-link:hover { color: var(--cyan); }
+    article { max-width: 820px; margin: 0 auto; padding: 3rem 2rem 6rem; }
+    .article-meta { display: flex; flex-wrap: wrap; gap: 0.6rem; align-items: center; margin-bottom: 1.5rem; }
+    .meta-tag { font-family: var(--font-mono); font-size: 0.7rem; background: rgba(0,212,255,0.08); border: 1px solid rgba(0,212,255,0.25); color: var(--cyan); padding: 0.2rem 0.6rem; border-radius: 3px; }
+    .meta-date { font-family: var(--font-mono); font-size: 0.7rem; color: var(--muted); }
+    h1 { font-size: clamp(1.5rem, 3vw, 2.2rem); font-weight: 700; line-height: 1.2; margin-bottom: 1rem; }
+    .article-intro { font-size: 1.05rem; color: var(--muted); margin-bottom: 2.5rem; border-left: 3px solid var(--cyan); padding-left: 1rem; }
+    h2 { font-family: var(--font-mono); font-size: 1rem; color: var(--cyan); margin: 2.5rem 0 1rem; padding-bottom: 0.4rem; border-bottom: 1px solid var(--border); }
+    h3 { font-size: 0.95rem; font-weight: 600; margin: 1.5rem 0 0.5rem; color: var(--text); }
+    p { margin-bottom: 1rem; color: var(--text); font-size: 0.95rem; }
+    .screenshot-block { margin: 1.5rem 0; }
+    .screenshot-block img { width: 100%; border: 1px solid var(--border); border-radius: 6px; display: block; }
+    .screenshot-caption { font-family: var(--font-mono); font-size: 0.7rem; color: var(--muted); margin-top: 0.5rem; padding: 0.4rem 0.8rem; background: var(--surface2); border-radius: 0 0 4px 4px; border: 1px solid var(--border); border-top: none; }
+    .screenshot-caption::before { content: '📸 '; }
+    .screenshot-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin: 1.5rem 0; }
+    .code-block { background: #060e18; border: 1px solid var(--border); border-radius: 4px; padding: 1rem 1.2rem; font-family: var(--font-mono); font-size: 0.78rem; line-height: 1.7; margin: 1rem 0; overflow-x: auto; color: var(--green); }
+    .code-block .cm { color: var(--muted); }
+    .code-block .kw { color: #79b8ff; }
+    .callout { background: rgba(0,212,255,0.05); border: 1px solid rgba(0,212,255,0.2); border-left: 3px solid var(--cyan); border-radius: 4px; padding: 1rem 1.2rem; margin: 1.5rem 0; font-size: 0.9rem; }
+    .callout strong { color: var(--cyan); }
+    .summary-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; margin: 1rem 0; }
+    .summary-item { background: var(--surface2); border: 1px solid var(--border); border-radius: 4px; padding: 0.8rem 1rem; font-size: 0.85rem; }
+    .summary-item span { color: var(--green); margin-right: 0.4rem; }
+    @media (max-width: 600px) { article { padding: 2rem 1rem 4rem; } .summary-grid { grid-template-columns: 1fr; } .screenshot-row { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+<nav>
+  <a href="index.html" class="logo">Tech<span>Desk</span>.log</a>
+  <a href="index.html" class="back-link">← Back to home</a>
+</nav>
+<article>
+  <div class="article-meta">
+    <span class="meta-tag">Home Lab</span>
+    <span class="meta-tag">Active Directory</span>
+    <span class="meta-tag">Windows Server 2022</span>
+    <span class="meta-tag">VirtualBox</span>
+    <span class="meta-date">August 15, 2026 · 12 min read</span>
+  </div>
+
+  <h1>Building an Active Directory Home Lab from Scratch</h1>
+
+  <p class="article-intro">I don't have spare hardware or a budget for lab equipment — just my laptop and VirtualBox. So I decided to build a home lab anyway and document everything I learned along the way. Here's how I set up a Windows Server 2022 Domain Controller, created users and groups, practiced password resets, and configured a shared folder with permissions.</p>
+
+  <div class="callout">
+    <strong>Quick note:</strong> Active Directory shows up in almost every IT job description for a reason — it's how companies manage who can log in, what they can access, and what policies apply to their computer. Learning it felt like unlocking a big piece of how enterprise IT actually works.
+  </div>
+
+  <h2>// 01. Getting Windows Server 2022 Running</h2>
+  <p>First thing I did was download the Windows Server 2022 Datacenter Evaluation ISO from Microsoft's site — it's free for 180 days, no credit card needed. I created a virtual machine in Oracle VirtualBox, attached the ISO, and let it install.</p>
+  <p>When it finished, I was greeted by the Server Manager Dashboard. This is basically the home screen for everything you do on a Windows Server — installing roles, checking events, managing the server. It felt very different from a regular Windows desktop.</p>
+
+  <div class="screenshot-block">
+    <img src="lab-step1.png" alt="Windows Server 2022 Server Manager Dashboard on first boot"/>
+    <div class="screenshot-caption">First boot into Windows Server 2022 — Server Manager Dashboard running inside VirtualBox.</div>
+  </div>
+
+  <h2>// 02. Renaming the Server and Setting a Static IP</h2>
+  <p>Before doing anything else, I needed to set two things up: a proper server name and a static IP address. The default name Windows gives the server is something random like "WIN-AB3XF2G" — not great. I renamed it to <strong>DC01</strong>, which stands for Domain Controller 01. That's a naming convention you'll see in a lot of real environments.</p>
+  <p>The static IP was just as important. If the server's IP keeps changing, DNS breaks and nothing on the network can find it. I set it manually through the Ethernet adapter properties.</p>
+
+  <div class="screenshot-block">
+    <img src="lab-step2.png" alt="Configuring static IP on the Ethernet adapter"/>
+    <div class="screenshot-caption">Setting a static IP through Ethernet Properties — a necessary step before promoting the server to a Domain Controller.</div>
+  </div>
+
+  <div class="code-block">
+    <span class="cm"># What I set for the static IP:</span><br/>
+    IP Address:      192.168.1.10<br/>
+    Subnet Mask:     255.255.255.0<br/>
+    Default Gateway: 192.168.1.1<br/>
+    Preferred DNS:   127.0.0.1  <span class="cm"># Points to itself — the DC will be its own DNS server</span>
+  </div>
+
+  <div class="screenshot-block">
+    <img src="lab-step3.png" alt="Local Server properties showing DC01 and static IP 192.168.1.10"/>
+    <div class="screenshot-caption">Local Server properties — hostname is now DC01 and Ethernet shows 192.168.1.10. Ready to go.</div>
+  </div>
+
+  <h2>// 03. Installing Active Directory Domain Services</h2>
+  <p>Now for the actual AD installation. From the Server Manager, I clicked <strong>Manage → Add Roles and Features</strong> and selected <strong>Active Directory Domain Services</strong>. I also added <strong>DNS Server</strong> at the same time — AD needs DNS to work, so it makes sense to install them together.</p>
+  <p>The wizard walked me through everything. One thing that threw me off at first: installing AD DS doesn't actually create a domain yet. That happens in the next step.</p>
+
+  <div class="screenshot-block">
+    <img src="lab-step4.png" alt="Selecting Active Directory Domain Services in the Add Roles wizard"/>
+    <div class="screenshot-caption">Selecting AD DS in the Add Roles and Features wizard — also brings in Group Policy Management and RSAT tools automatically.</div>
+  </div>
+
+  <div class="screenshot-block">
+    <img src="lab-step5.png" alt="AD DS installation progress on DC01"/>
+    <div class="screenshot-caption">Installation in progress on DC01 — AD DS, Group Policy Management, and the AD admin tools all installing at once.</div>
+  </div>
+
+  <h2>// 04. Promoting the Server to a Domain Controller</h2>
+  <p>After the installation finished, a link appeared that said <strong>"Promote this server to a domain controller."</strong> This is the step that actually creates the domain. I clicked it and chose to add a new forest, naming the domain <strong>corp.local</strong>.</p>
+  <p>There were some yellow warnings during the prerequisites check — I looked them up and they're completely normal for a lab environment, so I moved forward. After clicking Install, the server rebooted on its own. When it came back up, the login screen showed <strong>CORP\Administrator</strong> — that was the moment I knew it worked.</p>
+
+  <div class="screenshot-block">
+    <img src="lab-step6.png" alt="Prerequisites Check passed — ready to install"/>
+    <div class="screenshot-caption">Prerequisites Check — all checks passed with only informational warnings. Safe to proceed with installation.</div>
+  </div>
+
+  <div class="screenshot-block">
+    <img src="lab-step7.png" alt="Server rebooting after Domain Controller promotion"/>
+    <div class="screenshot-caption">The server rebooting automatically after promotion — completely normal, and honestly pretty satisfying to watch.</div>
+  </div>
+
+  <div class="screenshot-block">
+    <img src="lab-step8.png" alt="Server Manager showing AD DS and DNS active after reboot"/>
+    <div class="screenshot-caption">Back up after the reboot — AD DS and DNS are both showing green. Three roles active. The domain corp.local is live.</div>
+  </div>
+
+  <h2>// 05. Creating Organizational Units</h2>
+  <p>With the domain up, I opened <strong>Active Directory Users and Computers</strong> from the Tools menu. The first thing I did was create Organizational Units — OUs are basically folders inside AD that let you organize users by department. They also let you apply different Group Policies to different groups of people, which is huge in a real environment.</p>
+  <p>I created three: <strong>IT</strong>, <strong>HR</strong>, and <strong>Finance</strong>. Nothing fancy, but enough to practice the concepts that actually matter.</p>
+
+  <div class="screenshot-block">
+    <img src="lab-ous.png" alt="Active Directory Users and Computers showing IT, HR, Finance OUs under corp.local"/>
+    <div class="screenshot-caption">Active Directory Users and Computers — corp.local domain with Finance, HR, and IT OUs created and visible in the left panel.</div>
+  </div>
+
+  <h2>// 06. Creating User Accounts</h2>
+  <p>Next up: creating users. This is one of the first things you do when a new employee joins a company — you create their AD account so they can log in to their computer and access resources on the network. I created one user per department and placed them inside the right OU.</p>
+
+  <div class="screenshot-block">
+    <img src="lab-new-user.png" alt="New Object - User dialog in Active Directory"/>
+    <div class="screenshot-caption">The "New Object - User" dialog — filling in name, logon name, and domain. The UPN (user@corp.local) is what the user types to log in.</div>
+  </div>
+
+  <div class="screenshot-row">
+    <div class="screenshot-block">
+      <img src="lab-user-jsmith.png" alt="John Smith listed in the IT OU"/>
+      <div class="screenshot-caption">John Smith (jsmith) — created in the IT OU.</div>
+    </div>
+    <div class="screenshot-block">
+      <img src="lab-user-mgarcia.png" alt="Maria Garcia listed in the HR OU"/>
+      <div class="screenshot-caption">Maria Garcia (mgarcia) — created in the HR OU.</div>
+    </div>
+  </div>
+
+  <div class="screenshot-block">
+    <img src="lab-user-djohnson.png" alt="David Johnson listed in the Finance OU"/>
+    <div class="screenshot-caption">David Johnson (djohnson) — created in the Finance OU.</div>
+  </div>
+
+  <h2>// 07. Creating Security Groups</h2>
+  <p>Once users were created, I set up Security Groups — one per department. The idea is simple: instead of giving each person individual access to folders and resources, you put people in a group and give the group access. When someone leaves the company, you just remove them from the group and they lose access to everything at once. Much cleaner than managing permissions user by user.</p>
+
+  <div class="screenshot-block">
+    <img src="lab-group-add.png" alt="Adding jsmith to the IT_Department group"/>
+    <div class="screenshot-caption">Adding jsmith to the IT_Department security group — typing the username and using Check Names to verify it exists in the domain.</div>
+  </div>
+
+  <div class="screenshot-row">
+    <div class="screenshot-block">
+      <img src="lab-group-it.png" alt="IT_Department Members tab showing John Smith"/>
+      <div class="screenshot-caption">IT_Department — John Smith added as a member from corp.local/IT.</div>
+    </div>
+    <div class="screenshot-block">
+      <img src="lab-group-hr.png" alt="HR_Department Members tab showing Maria Garcia"/>
+      <div class="screenshot-caption">HR_Department — Maria Garcia added as a member from corp.local/HR.</div>
+    </div>
+  </div>
+
+  <div class="screenshot-block">
+    <img src="lab-group-finance.png" alt="Finance_Department Members tab showing David Johnson"/>
+    <div class="screenshot-caption">Finance_Department — David Johnson added as a member from corp.local/Finance.</div>
+  </div>
+
+  <h2>// 08. Password Reset and Account Unlock</h2>
+  <p>This is probably the most common helpdesk ticket out there: "I can't log in." Could be a forgotten password, could be a locked account from too many failed attempts. Either way, it's a quick fix in AD.</p>
+  <p>I right-clicked on John Smith's account and chose <strong>Reset Password</strong>. The dialog lets you set a new password and unlock the account at the same time — which is usually what you want since locked accounts are often the result of someone trying the wrong password too many times.</p>
+
+  <div class="screenshot-block">
+    <img src="lab-reset-menu.png" alt="Right-click context menu on John Smith showing Reset Password"/>
+    <div class="screenshot-caption">Right-clicking a user account — "Reset Password..." is right there in the menu. Fast to find, fast to use.</div>
+  </div>
+
+  <div class="screenshot-block">
+    <img src="lab-reset-dialog.png" alt="Reset Password dialog with new password and Unlock account checked"/>
+    <div class="screenshot-caption">Reset Password dialog — new password set, "Unlock the user's account" checked. Both done in a single step.</div>
+  </div>
+
+  <div class="screenshot-block">
+    <img src="lab-reset-confirm.png" alt="Confirmation message: The password for Jhon Smith has been changed"/>
+    <div class="screenshot-caption">Success — "The password for Jhon Smith has been changed." That's the ticket resolved.</div>
+  </div>
+
+  <div class="screenshot-block">
+    <img src="lab-unlock.png" alt="Account tab showing Unlock account checkbox on John Smith's properties"/>
+    <div class="screenshot-caption">The Account tab on a user's properties — this is where you can see and change account status, logon hours, and unlock a locked account.</div>
+  </div>
+
+  <h2>// 09. Shared Folder with Group Permissions</h2>
+  <p>Another classic ticket: "I'm a new employee and I need access to the IT folder." To practice this, I created a folder called <strong>Shared_IT</strong> on the C: drive and configured it to only be accessible by members of the IT_Department group. No random users, no Everyone — just the group that's supposed to have access.</p>
+
+  <div class="screenshot-block">
+    <img src="lab-file-explorer.png" alt="File Explorer open on C: drive"/>
+    <div class="screenshot-caption">File Explorer on the server — navigating to C: to create the shared folder. The server has plenty of space: 38.9 GB free.</div>
+  </div>
+
+  <div class="screenshot-block">
+    <img src="lab-folder-rightclick.png" alt="Right-clicking Shared_IT folder and selecting Properties"/>
+    <div class="screenshot-caption">Right-clicking the Shared_IT folder to open Properties — this is how you start the sharing configuration process.</div>
+  </div>
+
+  <div class="screenshot-block">
+    <img src="lab-sharing-tab.png" alt="Sharing tab showing folder is Not Shared"/>
+    <div class="screenshot-caption">Sharing tab — folder says "Not Shared" before any configuration. Clicking Advanced Sharing opens the full permissions setup.</div>
+  </div>
+
+  <div class="screenshot-block">
+    <img src="lab-advanced-sharing.png" alt="Advanced Sharing dialog with Share this folder checked"/>
+    <div class="screenshot-caption">Advanced Sharing — checked "Share this folder" and named it Shared_IT. Then clicked Permissions to control who gets in.</div>
+  </div>
+
+  <div class="screenshot-block">
+    <img src="lab-permissions-add.png" alt="Adding IT_Department group to folder permissions"/>
+    <div class="screenshot-caption">Adding IT_Department from corp.local to the share permissions — replacing the default Everyone entry with the specific group.</div>
+  </div>
+
+  <div class="screenshot-block">
+    <img src="lab-permissions-set.png" alt="Permissions showing IT_Department with Change and Read access"/>
+    <div class="screenshot-caption">Permissions set — IT_Department gets Change and Read. Full Control stays off. Users can work with files but can't change the share settings.</div>
+  </div>
+
+  <div class="screenshot-block">
+    <img src="lab-shared-confirm.png" alt="Sharing tab now showing Shared_IT as Shared with network path"/>
+    <div class="screenshot-caption">Done — the folder now shows "Shared" with the network path \\DC01\Shared_IT. Any IT_Department member can access it over the network.</div>
+  </div>
+
+  <h2>// 10. Verifying Everything with PowerShell</h2>
+  <p>Last step: I opened PowerShell as Administrator and ran <strong>Get-SmbShare</strong> to confirm the share was actually active. This command lists everything the server is currently sharing over the network — a useful thing to know for auditing or troubleshooting.</p>
+
+  <div class="screenshot-block">
+    <img src="lab-powershell-open.png" alt="Windows PowerShell opened as Administrator"/>
+    <div class="screenshot-caption">PowerShell opened as Administrator — always needed for server-level commands.</div>
+  </div>
+
+  <div class="code-block">
+    <span class="kw">PS C:\></span> Get-SmbShare<br/><br/>
+    Name        Path                                     Description<br/>
+    ----        ----                                     -----------<br/>
+    ADMIN$      C:\Windows                               Remote Admin<br/>
+    C$          C:\                                      Default share<br/>
+    IPC$                                                 Remote IPC<br/>
+    NETLOGON    C:\Windows\SYSVOL\sysvol\corp.local\...  Logon server share<br/>
+    <span class="cm">Shared_IT   C:\Shared_IT</span><br/>
+    SYSVOL      C:\Windows\SYSVOL\sysvol                 Logon server share
+  </div>
+
+  <div class="screenshot-block">
+    <img src="lab-powershell-result.png" alt="Get-SmbShare output showing Shared_IT in the list"/>
+    <div class="screenshot-caption">Get-SmbShare output — Shared_IT is there at C:\Shared_IT. Share is active and ready.</div>
+  </div>
+
+  <h2>// What I Took Away From This</h2>
+  <p>Going through this lab made a lot of things click that didn't fully make sense when I was just reading about them. A few things stood out:</p>
+  <p>The DNS setup was probably the most interesting part. Setting the preferred DNS to 127.0.0.1 — pointing the server to itself — felt weird at first, but it makes sense once you understand that the DC is supposed to be the authority for the domain. Everything on the network asks it "where is this computer?" and it answers.</p>
+  <p>Security groups also made a lot more sense after doing this hands-on. Managing permissions at the group level instead of the user level just scales so much better. One change, and it affects everyone in the group.</p>
+  <p>And the password reset — honestly, it's the simplest thing, but being able to actually do it in a real AD environment felt different than just reading about it.</p>
+
+  <div class="summary-grid">
+    <div class="summary-item"><span>✅</span> Created Organizational Units (IT, HR, Finance)</div>
+    <div class="summary-item"><span>✅</span> Created 3 domain user accounts</div>
+    <div class="summary-item"><span>✅</span> Created security groups per department</div>
+    <div class="summary-item"><span>✅</span> Added users to their respective groups</div>
+    <div class="summary-item"><span>✅</span> Reset a password and unlocked an account</div>
+    <div class="summary-item"><span>✅</span> Created a shared folder with group permissions</div>
+    <div class="summary-item"><span>✅</span> Verified shares with Get-SmbShare in PowerShell</div>
+    <div class="summary-item"><span>✅</span> Documented the whole process with screenshots</div>
+  </div>
+
+  <div class="callout">
+    <strong>What's next:</strong> I'm planning to connect a Windows 10 client VM to the corp.local domain so I can experience the full picture — logging in as a domain user, applying Group Policies, and practicing helpdesk tasks from the user's side too.
+  </div>
+
+</article>
+</body>
+</html>
