@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Setting Up Remote Desktop Between My DC and Client | TechDesk.log</title>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0D1B2A; --surface: #1E2D3D; --surface2: #162536;
+      --border: #2A3F54; --cyan: #00D4FF; --green: #39D353;
+      --yellow: #F0C040; --text: #E8EDF2; --muted: #8A9BB0;
+      --font-mono: 'JetBrains Mono', monospace;
+      --font-body: 'Inter', sans-serif;
+    }
+    body { background: var(--bg); color: var(--text); font-family: var(--font-body); line-height: 1.7; }
+    nav { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 2rem; height: 56px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 99; }
+    .logo { font-family: var(--font-mono); font-size: 1rem; font-weight: 700; color: var(--cyan); text-decoration: none; }
+    .logo span { color: var(--text); }
+    .back-link { font-family: var(--font-mono); font-size: 0.78rem; color: var(--muted); text-decoration: none; }
+    .back-link:hover { color: var(--cyan); }
+    article { max-width: 820px; margin: 0 auto; padding: 3rem 2rem 6rem; }
+    .article-meta { display: flex; flex-wrap: wrap; gap: 0.6rem; align-items: center; margin-bottom: 1.5rem; }
+    .meta-tag { font-family: var(--font-mono); font-size: 0.7rem; background: rgba(0,212,255,0.08); border: 1px solid rgba(0,212,255,0.25); color: var(--cyan); padding: 0.2rem 0.6rem; border-radius: 3px; }
+    .meta-tag.yellow { background: rgba(240,192,64,0.08); border-color: rgba(240,192,64,0.25); color: var(--yellow); }
+    .meta-date { font-family: var(--font-mono); font-size: 0.7rem; color: var(--muted); }
+    h1 { font-size: clamp(1.5rem, 3vw, 2.2rem); font-weight: 700; line-height: 1.2; margin-bottom: 1rem; }
+    .article-intro { font-size: 1.05rem; color: var(--muted); margin-bottom: 2.5rem; border-left: 3px solid var(--yellow); padding-left: 1rem; }
+    h2 { font-family: var(--font-mono); font-size: 1rem; color: var(--cyan); margin: 2.5rem 0 1rem; padding-bottom: 0.4rem; border-bottom: 1px solid var(--border); }
+    p { margin-bottom: 1rem; color: var(--text); font-size: 0.95rem; }
+    .screenshot-block { margin: 1.5rem 0; }
+    .screenshot-block img { width: 100%; border: 1px solid var(--border); border-radius: 6px; display: block; }
+    .screenshot-caption { font-family: var(--font-mono); font-size: 0.7rem; color: var(--muted); margin-top: 0.5rem; padding: 0.4rem 0.8rem; background: var(--surface2); border-radius: 0 0 4px 4px; border: 1px solid var(--border); border-top: none; }
+    .screenshot-caption::before { content: '📸 '; }
+    .code-block { background: #060e18; border: 1px solid var(--border); border-radius: 4px; padding: 1rem 1.2rem; font-family: var(--font-mono); font-size: 0.78rem; line-height: 1.7; margin: 1rem 0; overflow-x: auto; color: var(--green); }
+    .code-block .err { color: #ff5f5f; }
+    .code-block .kw { color: #79b8ff; }
+    .code-block .cm { color: var(--muted); }
+    .callout { background: rgba(240,192,64,0.05); border: 1px solid rgba(240,192,64,0.2); border-left: 3px solid var(--yellow); border-radius: 4px; padding: 1rem 1.2rem; margin: 1.5rem 0; font-size: 0.9rem; }
+    .callout strong { color: var(--yellow); }
+    .callout.cyan { background: rgba(0,212,255,0.05); border-color: rgba(0,212,255,0.2); border-left-color: var(--cyan); }
+    .callout.cyan strong { color: var(--cyan); }
+    .takeaway-list { list-style: none; padding: 0; }
+    .takeaway-list li { padding: 0.6rem 0; border-bottom: 1px solid var(--border); font-size: 0.92rem; padding-left: 1.5rem; position: relative; }
+    .takeaway-list li:last-child { border-bottom: none; }
+    .takeaway-list li::before { content: '→'; position: absolute; left: 0; color: var(--cyan); font-family: var(--font-mono); }
+    .tools-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin: 1rem 0; }
+    .tool-tag { font-family: var(--font-mono); font-size: 0.75rem; background: var(--surface2); border: 1px solid var(--border); color: var(--green); padding: 0.4rem 0.8rem; border-radius: 3px; }
+    @media (max-width: 600px) { article { padding: 2rem 1rem 4rem; } .tools-grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+<nav>
+  <a href="index.html" class="logo">Tech<span>Desk</span>.log</a>
+  <a href="index.html" class="back-link">← Back to home</a>
+</nav>
+<article>
+  <div class="article-meta">
+    <span class="meta-tag">Remote Desktop</span>
+    <span class="meta-tag">Active Directory</span>
+    <span class="meta-tag">Networking</span>
+    <span class="meta-date">August 18, 2026 · 7 min read</span>
+  </div>
+
+  <h1>Setting Up Remote Desktop Between My DC and Client (Like an IT Tech Would)</h1>
+
+  <p class="article-intro">Next thing on my list after the DNS mess: Remote Desktop. This is probably one of the most "you'll do this every single day" tasks in help desk, so I wanted to actually set it up the right way instead of just flipping a switch and calling it done.</p>
+
+  <p>The idea I had in my head: imagine a user calls in with a problem, and instead of walking over to their desk you just remote in and fix it. Sounds simple, but there's a right way and a lazy way to do it. I wanted to do it the right way — client has to explicitly allow it, and only the right person should be able to connect in. Here's how I set the whole thing up and actually proved it worked.</p>
+
+  <h2>// Step 1: Turn on Remote Desktop on the client</h2>
+  <p>Started on <strong>CLIENT01</strong>, my Windows 10 box. Settings → System → Remote Desktop, flip the toggle. Windows doesn't just let you turn it on though — it makes you confirm first, since you're basically opening a door into the machine.</p>
+
+  <div class="screenshot-block">
+    <img src="rdp_01_enable_prompt.png" alt="Windows Remote Desktop Settings confirmation dialog asking Enable Remote Desktop?"/>
+    <div class="screenshot-caption">CLIENT01 — confirming "Enable Remote Desktop?" before turning it on. Makes sense Windows double-checks this one.</div>
+  </div>
+
+  <div class="screenshot-block">
+    <img src="rdp_02_enabled_pcname.png" alt="Remote Desktop settings showing the toggle On and the PC name CLIENT01.corp.local"/>
+    <div class="screenshot-caption">Toggle's on. Windows gives you the PC name to connect to — CLIENT01.corp.local — which is what I'll need from the other end.</div>
+  </div>
+
+  <h2>// Step 2: Don't just leave it on Administrator</h2>
+  <p>Here's the thing — by default, whoever's in the local Administrators group can already connect. But I didn't want to lean on that. In a real job you're usually connecting with your own account, not some shared admin login. So I went into "Select users that can remotely access this PC" and added my actual domain user, <strong>CORP\smith</strong>, by name.</p>
+
+  <div class="screenshot-block">
+    <img src="rdp_03_users_added.png" alt="Remote Desktop Users dialog showing CORP\smith added, with a note that CORP\Administrator already has access"/>
+    <div class="screenshot-caption">CORP\smith added to the Remote Desktop Users list. The dialog reminds you CORP\Administrator already has access — good to know, not something I wanted to rely on though.</div>
+  </div>
+
+  <div class="callout cyan">
+    <strong>Why I bothered with this:</strong> It's a small thing, but scoping access to a specific account instead of just riding on default admin rights is basic least-privilege thinking. Habit worth building early.
+  </div>
+
+  <h2>// Step 3: Connect from the other machine</h2>
+  <p>Hopped over to <strong>DC01</strong> (my "admin machine" for this exercise) and opened Remote Desktop Connection, pointed it at CLIENT01's IP — 192.168.1.20.</p>
+
+  <div class="screenshot-block">
+    <img src="rdp_04_connecting.png" alt="Remote Desktop Connection window showing Connecting to 192.168.1.20 and Securing remote connection"/>
+    <div class="screenshot-caption">"Securing remote connection..." — the connection handshake happening before it asks for credentials.</div>
+  </div>
+
+  <h2>// Step 4: The certificate warning (don't panic, it's expected)</h2>
+  <p>Right after logging in, I got hit with a certificate warning. First time you see this it looks alarming, but it's totally expected in a lab setup — CLIENT01 doesn't have a cert from a trusted CA, so RDP just falls back to a self-signed one that Windows can't vouch for.</p>
+
+  <div class="screenshot-block">
+    <img src="rdp_05_certificate_warning.png" alt="RDP certificate warning stating the identity of the remote computer cannot be verified, certificate name CLIENT01.corp.local"/>
+    <div class="screenshot-caption">"The identity of the remote computer cannot be verified" — but the certificate name matches CLIENT01.corp.local, which is exactly the machine I was trying to reach.</div>
+  </div>
+
+  <p>I still checked the certificate name against the machine I was actually trying to connect to before hitting Yes. Good habit to build now, because on a real network that's exactly the kind of check that catches something sketchy before it's a problem.</p>
+
+  <h2>// Step 5: Proving I actually landed on the right machine</h2>
+  <p>Once I was in, I had a full remote session sitting on CLIENT01's desktop. To make sure I wasn't just staring at a local window, I popped open Command Prompt and ran <code style="font-family: var(--font-mono); background: var(--surface2); padding: 0.1rem 0.4rem; border-radius: 3px; font-size: 0.85rem;">hostname</code>.</p>
+
+  <div class="screenshot-block">
+    <img src="rdp_06_connected_session.png" alt="Full remote desktop session showing CLIENT01's desktop wallpaper viewed from DC01 via RDP"/>
+    <div class="screenshot-caption">Connected — this is CLIENT01's desktop, viewed from DC01. Title bar shows the IP I'm remoted into: 192.168.1.20.</div>
+  </div>
+
+  <div class="screenshot-block">
+    <img src="rdp_07_hostname_confirmation.png" alt="Command Prompt inside the RDP session showing hostname command returning CLIENT01"/>
+    <div class="screenshot-caption">hostname says CLIENT01. Confirmed — I'm actually inside the remote machine, not just looking at some window that looks like it.</div>
+  </div>
+
+  <div class="code-block">
+    C:\Users\Administrator><span class="kw">hostname</span><br/>
+    CLIENT01<br/><br/>
+    C:\Users\Administrator>
+  </div>
+
+  <h2>// What I took away from this</h2>
+
+  <ul class="takeaway-list">
+    <li>Turning RDP on is the easy 10% — deciding who's actually allowed in is the part that matters. Adding a named user instead of leaning on default admin access is a small habit that pays off.</li>
+    <li>Don't just click through certificate warnings without looking. Checking the name against the machine you meant to hit takes two seconds and it's the kind of thing that saves you one day.</li>
+    <li>Always double check where you actually landed. Running hostname is such a small thing but it's saved me from confusion before, especially once you're juggling a few RDP windows at once.</li>
+    <li>This is one of those "you'll do it constantly" tasks in help desk, so I wanted the muscle memory for the whole flow, not just clicking Connect and hoping.</li>
+  </ul>
+
+  <h2>// Tools used</h2>
+  <div class="tools-grid">
+    <span class="tool-tag">Remote Desktop Connection (mstsc)</span>
+    <span class="tool-tag">Remote Desktop Settings</span>
+    <span class="tool-tag">Remote Desktop Users</span>
+    <span class="tool-tag">Command Prompt / hostname</span>
+  </div>
+
+  <div class="callout cyan" style="margin-top: 2rem;">
+    <strong>Next:</strong> Setting up a Group Policy Object to lock down Control Panel access for jsmith, and actually confirming it took effect instead of just hoping it did.
+  </div>
+
+</article>
+</body>
+</html>

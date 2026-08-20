@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Locking Down Control Panel with a Group Policy Object | TechDesk.log</title>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0D1B2A; --surface: #1E2D3D; --surface2: #162536;
+      --border: #2A3F54; --cyan: #00D4FF; --green: #39D353;
+      --yellow: #F0C040; --text: #E8EDF2; --muted: #8A9BB0;
+      --font-mono: 'JetBrains Mono', monospace;
+      --font-body: 'Inter', sans-serif;
+    }
+    body { background: var(--bg); color: var(--text); font-family: var(--font-body); line-height: 1.7; }
+    nav { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 2rem; height: 56px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 99; }
+    .logo { font-family: var(--font-mono); font-size: 1rem; font-weight: 700; color: var(--cyan); text-decoration: none; }
+    .logo span { color: var(--text); }
+    .back-link { font-family: var(--font-mono); font-size: 0.78rem; color: var(--muted); text-decoration: none; }
+    .back-link:hover { color: var(--cyan); }
+    article { max-width: 820px; margin: 0 auto; padding: 3rem 2rem 6rem; }
+    .article-meta { display: flex; flex-wrap: wrap; gap: 0.6rem; align-items: center; margin-bottom: 1.5rem; }
+    .meta-tag { font-family: var(--font-mono); font-size: 0.7rem; background: rgba(0,212,255,0.08); border: 1px solid rgba(0,212,255,0.25); color: var(--cyan); padding: 0.2rem 0.6rem; border-radius: 3px; }
+    .meta-tag.yellow { background: rgba(240,192,64,0.08); border-color: rgba(240,192,64,0.25); color: var(--yellow); }
+    .meta-date { font-family: var(--font-mono); font-size: 0.7rem; color: var(--muted); }
+    h1 { font-size: clamp(1.5rem, 3vw, 2.2rem); font-weight: 700; line-height: 1.2; margin-bottom: 1rem; }
+    .article-intro { font-size: 1.05rem; color: var(--muted); margin-bottom: 2.5rem; border-left: 3px solid var(--yellow); padding-left: 1rem; }
+    h2 { font-family: var(--font-mono); font-size: 1rem; color: var(--cyan); margin: 2.5rem 0 1rem; padding-bottom: 0.4rem; border-bottom: 1px solid var(--border); }
+    p { margin-bottom: 1rem; color: var(--text); font-size: 0.95rem; }
+    .screenshot-block { margin: 1.5rem 0; }
+    .screenshot-block img { width: 100%; border: 1px solid var(--border); border-radius: 6px; display: block; }
+    .screenshot-caption { font-family: var(--font-mono); font-size: 0.7rem; color: var(--muted); margin-top: 0.5rem; padding: 0.4rem 0.8rem; background: var(--surface2); border-radius: 0 0 4px 4px; border: 1px solid var(--border); border-top: none; }
+    .screenshot-caption::before { content: '📸 '; }
+    .code-block { background: #060e18; border: 1px solid var(--border); border-radius: 4px; padding: 1rem 1.2rem; font-family: var(--font-mono); font-size: 0.78rem; line-height: 1.7; margin: 1rem 0; overflow-x: auto; color: var(--green); }
+    .code-block .err { color: #ff5f5f; }
+    .code-block .kw { color: #79b8ff; }
+    .code-block .cm { color: var(--muted); }
+    .callout { background: rgba(240,192,64,0.05); border: 1px solid rgba(240,192,64,0.2); border-left: 3px solid var(--yellow); border-radius: 4px; padding: 1rem 1.2rem; margin: 1.5rem 0; font-size: 0.9rem; }
+    .callout strong { color: var(--yellow); }
+    .callout.cyan { background: rgba(0,212,255,0.05); border-color: rgba(0,212,255,0.2); border-left-color: var(--cyan); }
+    .callout.cyan strong { color: var(--cyan); }
+    .takeaway-list { list-style: none; padding: 0; }
+    .takeaway-list li { padding: 0.6rem 0; border-bottom: 1px solid var(--border); font-size: 0.92rem; padding-left: 1.5rem; position: relative; }
+    .takeaway-list li:last-child { border-bottom: none; }
+    .takeaway-list li::before { content: '→'; position: absolute; left: 0; color: var(--cyan); font-family: var(--font-mono); }
+    .tools-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin: 1rem 0; }
+    .tool-tag { font-family: var(--font-mono); font-size: 0.75rem; background: var(--surface2); border: 1px solid var(--border); color: var(--green); padding: 0.4rem 0.8rem; border-radius: 3px; }
+    @media (max-width: 600px) { article { padding: 2rem 1rem 4rem; } .tools-grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+<nav>
+  <a href="index.html" class="logo">Tech<span>Desk</span>.log</a>
+  <a href="index.html" class="back-link">← Back to home</a>
+</nav>
+<article>
+  <div class="article-meta">
+    <span class="meta-tag">Group Policy</span>
+    <span class="meta-tag">Active Directory</span>
+    <span class="meta-tag">PowerShell</span>
+    <span class="meta-date">August 19, 2026 · 7 min read</span>
+  </div>
+
+  <h1>Locking Down Control Panel with a Group Policy Object</h1>
+
+  <p class="article-intro">Right after getting Remote Desktop working, I moved on to Group Policy — one of those AD tools that shows up in basically every IT job posting. The goal was simple on paper: stop a user from messing around in Control Panel. The actual point was proving to myself I could push a setting out to the domain and confirm it landed, not just assume it did.</p>
+
+  <p>Here's the scenario I had in mind: you don't want every random user in Control Panel changing system settings they shouldn't touch. Instead of walking to every machine one by one, you push a Group Policy Object out from the DC and it handles all of them at once. So I built one, applied it, and then actually went and checked that it worked on jsmith's account instead of just trusting it.</p>
+
+  <h2>// Step 1: Make the GPO and link it</h2>
+  <p>Opened Group Policy Management on DC01, right-clicked corp.local, and picked "Create a GPO in this domain, and Link it here..."</p>
+
+  <div class="screenshot-block">
+    <img src="gpo_01_create_gpo_menu.png" alt="Group Policy Management console showing the right-click menu with Create a GPO in this domain, and Link it here option"/>
+    <div class="screenshot-caption">Right-clicking corp.local and creating a new GPO linked straight to the domain.</div>
+  </div>
+
+  <p>Called it <strong>Block Control Panel</strong>. Linking it at the domain level means it hits every user in corp.local — good enough for testing, though realistically I'd scope something like this to a specific OU instead of blasting the whole domain.</p>
+
+  <div class="screenshot-block">
+    <img src="gpo_02_gpo_linked_domain.png" alt="Group Policy Management tree showing Block Control Panel GPO listed under corp.local domain"/>
+    <div class="screenshot-caption">Block Control Panel now shows up under corp.local, right next to the Default Domain Policy.</div>
+  </div>
+
+  <h2>// Step 2: Track down the actual setting</h2>
+  <p>Opened the Group Policy Management Editor and dug into <strong>User Configuration → Policies → Administrative Templates → Control Panel</strong>.</p>
+
+  <div class="screenshot-block">
+    <img src="gpo_03_gpme_editor_open.png" alt="Group Policy Management Editor open on Block Control Panel policy, tree expanded to Control Panel node"/>
+    <div class="screenshot-caption">Drilled down through User Configuration to the Control Panel node.</div>
+  </div>
+
+  <div class="screenshot-block">
+    <img src="gpo_04_control_panel_settings_list.png" alt="List of Control Panel policy settings including Prohibit access to Control Panel and PC settings"/>
+    <div class="screenshot-caption">Five settings live here. The one I actually want: "Prohibit access to Control Panel and PC settings."</div>
+  </div>
+
+  <h2>// Step 3: Flip it on</h2>
+  <p>Opened that setting and set it to Enabled. Before clicking OK though, I actually read the Help panel on the right — it's easy to assume a setting like this does one narrow thing and it turns out to do way more.</p>
+
+  <div class="screenshot-block">
+    <img src="gpo_05_prohibit_access_enabled.png" alt="Prohibit access to Control Panel and PC settings dialog set to Enabled, with help text describing the effect"/>
+    <div class="screenshot-caption">Set to Enabled. Turns out this one blocks Control Panel from the Start screen, File Explorer, AND the right-click context menu — more than I expected from the name.</div>
+  </div>
+
+  <div class="callout">
+    <strong>Glad I checked:</strong> I almost skipped reading the Help text, figured "prohibit access to control panel" was self-explanatory. Turns out it kills access from several different entry points at once, not just the obvious shortcut. Two extra seconds of reading, worth it.
+  </div>
+
+  <h2>// Step 4: Push it out right now</h2>
+  <p>GPOs normally apply on their own schedule, but I wasn't about to sit around waiting for a refresh cycle. Ran <code style="font-family: var(--font-mono); background: var(--surface2); padding: 0.1rem 0.4rem; border-radius: 3px; font-size: 0.85rem;">gpupdate /force</code> from PowerShell on DC01.</p>
+
+  <div class="screenshot-block">
+    <img src="gpo_06_gpupdate_force.png" alt="PowerShell running gpupdate /force showing Computer Policy update and User Policy update completed successfully"/>
+    <div class="screenshot-caption">gpupdate /force — both Computer Policy and User Policy came back "completed successfully."</div>
+  </div>
+
+  <h2>// Step 5: Actually prove it worked</h2>
+  <p>Turning a setting on and knowing it actually applied are two different things — I wasn't going to just take Windows' word for it. Logged into CLIENT01 as jsmith and ran <code style="font-family: var(--font-mono); background: var(--surface2); padding: 0.1rem 0.4rem; border-radius: 3px; font-size: 0.85rem;">gpresult /r</code> to see for myself.</p>
+
+  <div class="screenshot-block">
+    <img src="gpo_07_gpresult_rsop_applied.png" alt="Command Prompt showing gpresult output listing Block Control Panel under Applied Group Policy Objects for jsmith"/>
+    <div class="screenshot-caption">There it is — "Applied Group Policy Objects: Block Control Panel." Landed on jsmith's session, pulled from DC01.corp.local.</div>
+  </div>
+
+  <div class="screenshot-block">
+    <img src="gpo_08_gpresult_full_output.png" alt="Full gpresult output showing RSOP data for CORP\jsmith on CLIENT01, including domain and OU information"/>
+    <div class="screenshot-caption">Full RSOP dump for CORP\jsmith on CLIENT01 — confirms the policy applied at 3:33:47 PM from DC01.corp.local.</div>
+  </div>
+
+  <div class="code-block">
+    C:\Users\jsmith><span class="kw">gpresult /r</span><br/><br/>
+    RSOP data for CORP\jsmith on CLIENT01 : Logging Mode<br/>
+    ----------------------------------------------------<br/><br/>
+    USER SETTINGS<br/>
+    --------------<br/>
+        Last time Group Policy was applied: 8/15/2026 at 3:33:47 PM<br/>
+        Group Policy was applied from:      DC01.corp.local<br/><br/>
+        Applied Group Policy Objects<br/>
+        -----------------------------<br/>
+            <span class="kw">Block Control Panel</span>
+  </div>
+
+  <p>That was my confirmation — the GPO applied cleanly to jsmith, pulled from the right DC, nothing filtered it out. I could've gone and actually tried opening Control Panel as jsmith just to see it in action, but honestly gpresult already told me everything I needed to know.</p>
+
+  <h2>// What I took away from this</h2>
+
+  <ul class="takeaway-list">
+    <li>Making a GPO and having it actually apply are two totally different milestones. gpupdate /force pushes it out — gpresult /r is how you prove it actually landed.</li>
+    <li>Read the Help text before you enable a policy. "Prohibit access to Control Panel" sounds narrow but it quietly locks down way more than just that one shortcut.</li>
+    <li>Linking at the domain level is quick for testing, but I know for a real environment I'd scope this down to a specific OU so it's not touching people it has no business touching.</li>
+    <li>gpresult /r is genuinely a great troubleshooting tool beyond just this — it also shows group membership and flags anything that got filtered out, which is exactly what I'd check first if someone said "the policy isn't working for me."</li>
+  </ul>
+
+  <h2>// Tools used</h2>
+  <div class="tools-grid">
+    <span class="tool-tag">Group Policy Management Console</span>
+    <span class="tool-tag">Group Policy Management Editor</span>
+    <span class="tool-tag">gpupdate /force</span>
+    <span class="tool-tag">gpresult /r</span>
+  </div>
+
+  <div class="callout cyan" style="margin-top: 2rem;">
+    <strong>Next:</strong> Thinking about bringing JIRA into the lab for ticket tracking, then messing around with some basic SQL and DHCP.
+  </div>
+
+</article>
+</body>
+</html>
